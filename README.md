@@ -43,7 +43,7 @@ See `.env.example`. Every secret is server-only. Never give a secret a `NEXT_PUB
 
 ## Database
 
-1. Create a Supabase project (region Mumbai).
+1. Create a Supabase project (this one is in Seoul, ap-northeast-2; `vercel.json` pins functions to `icn1` to match).
 2. In the SQL Editor, run `supabase/migrations/0001_init.sql`, then `supabase/seed.sql` (a demo trip).
 3. Check that every table shows RLS enabled.
 
