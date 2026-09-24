@@ -20,6 +20,5 @@ export const env = {
   cronSecret: () => required("CRON_SECRET"),
   wikivoyageUserAgent: () =>
     process.env.WIKIVOYAGE_USER_AGENT || "GroupTripDecider/1.0",
-  appUrl: () =>
-    (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, ""),
+  appUrl: () => process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || null,
 };
