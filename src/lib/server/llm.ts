@@ -29,7 +29,9 @@ type Args<T> = {
 };
 
 export function llmProvider(): "claude" | "gemini" {
-  return process.env.ANTHROPIC_API_KEY ? "claude" : "gemini";
+  // Only a real Anthropic key switches providers; blank or placeholder values
+  // (e.g. copied from .env.example) keep the free Gemini path.
+  return process.env.ANTHROPIC_API_KEY?.startsWith("sk-ant-") ? "claude" : "gemini";
 }
 
 export async function generateStructured<T>(args: Args<T>): Promise<T> {
