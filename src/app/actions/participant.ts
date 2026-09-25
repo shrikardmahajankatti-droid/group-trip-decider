@@ -7,6 +7,7 @@ import { submissionSchema } from "@/lib/schemas";
 import { hashToken, newToken, setParticipantCookie } from "@/lib/server/auth";
 import { db } from "@/lib/server/db";
 import { triggerIfDue } from "@/lib/server/generation";
+import { getShortlist } from "@/lib/server/shortlist";
 import {
   friendlyDbError,
   getTripBySlug,
@@ -43,7 +44,10 @@ export async function submitPreferences(
 ): Promise<SubmitState> {
   const trip = await getTripBySlug(slug);
   if (!trip) return { error: "Trip not found" };
-  if (trip.status === "locked") return { error: "This trip is locked, so answers can't be changed." };
+  if (trip.status === "locked") {
+    await logEvent(trip.id, "reversal_blocked");
+    return { error: "This trip is locked, so answers can't be changed." };
+  }
 
   const viewer = await getViewer(trip);
   if (!viewer) return { error: "Choose your name first." };
@@ -93,4 +97,33 @@ export async function submitPreferences(
   await triggerIfDue(trip);
   revalidatePath(`/t/${slug}`);
   return { savedAt: new Date().toISOString() };
+}
+
+export type VoteState = { error?: string; ok?: string };
+
+/** One vote per participant, final once cast (unique constraint + DB trigger). */
+export async function castVote(slug: string, optionId: string): Promise<VoteState> {
+  const trip = await getTripBySlug(slug);
+  if (!trip) return { error: "Trip not found" };
+  if (trip.status === "locked") {
+    await logEvent(trip.id, "reversal_blocked");
+    return { error: "Voting has closed. The trip is locked." };
+  }
+  if (trip.status !== "published") return { error: "Voting opens once the options are published." };
+
+  const viewer = await getViewer(trip);
+  if (!viewer) return { error: "Choose your name first." };
+
+  const shortlist = await getShortlist(trip.id);
+  if (!shortlist?.options.some((o) => o.id === optionId)) return { error: "That option isn't on the shortlist." };
+
+  const { error } = await db()
+    .from("votes")
+    .insert({ trip_id: trip.id, participant_id: viewer.participant.id, option_id: optionId });
+  if (error) {
+    if (error.code === "23505") return { error: "You've already voted. Votes are final." };
+    return { error: friendlyDbError(error.message) };
+  }
+  revalidatePath(`/t/${slug}`);
+  return { ok: "Vote recorded ✓" };
 }

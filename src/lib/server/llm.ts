@@ -9,8 +9,12 @@ import { sleep } from "./http";
 // One structured-output call, validated with Zod. Gemini (free tier) by
 // default; Claude is used instead only if ANTHROPIC_API_KEY is set.
 
-const GEMINI_FALLBACK_MODEL = "gemini-3.1-flash-lite";
-const CALL_TIMEOUT_MS = 90_000;
+// Free-tier latency (measured 2026-09-25): flash-lite answers in seconds,
+// 3.5-flash can take well over a minute on our prompts. Primary comes from
+// GEMINI_MODEL; the other one is the fallback.
+const GEMINI_DEFAULT_MODEL = "gemini-3.1-flash-lite";
+const GEMINI_ALT_MODEL = "gemini-3.5-flash";
+const CALL_TIMEOUT_MS = 60_000;
 
 export class LlmError extends Error {}
 
@@ -76,7 +80,8 @@ async function callGemini<T>(args: Args<T>, prompt: string): Promise<unknown> {
   if (!apiKey) throw new LlmError("GEMINI_API_KEY is not set");
   gemini ??= new GoogleGenAI({ apiKey });
 
-  const models = [...new Set([env.geminiModel() || "gemini-3.5-flash", GEMINI_FALLBACK_MODEL])];
+  const primary = env.geminiModel() || GEMINI_DEFAULT_MODEL;
+  const models = [primary, primary === GEMINI_DEFAULT_MODEL ? GEMINI_ALT_MODEL : GEMINI_DEFAULT_MODEL];
   let lastError: unknown = null;
   for (const [i, model] of models.entries()) {
     try {
