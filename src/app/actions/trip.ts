@@ -5,6 +5,7 @@ import { istLocalToDate } from "@/lib/logic/dates";
 import { createTripSchema } from "@/lib/schemas";
 import { baseUrl, hashToken, newToken, setParticipantCookie } from "@/lib/server/auth";
 import { db } from "@/lib/server/db";
+import { allow, SLOW_DOWN } from "@/lib/server/ratelimit";
 import { logEvent } from "@/lib/server/trips";
 
 export type CreateTripState = {
@@ -28,6 +29,7 @@ export async function createTrip(
   _prev: CreateTripState,
   formData: FormData,
 ): Promise<CreateTripState> {
+  if (!(await allow("createTrip"))) return { error: SLOW_DOWN };
   const parsed = createTripSchema.safeParse({
     tripName: formData.get("tripName"),
     coordinatorName: formData.get("coordinatorName"),

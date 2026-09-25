@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { castVote, claimName } from "@/app/actions/participant";
 import { ActionButton } from "@/components/ActionButton";
@@ -21,11 +22,14 @@ import {
 } from "@/lib/server/trips";
 
 export const maxDuration = 300; // server actions on this page may run the pipeline via after()
+// Trip pages show friends' names: keep them out of search engines.
+export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 const ERRORS: Record<string, string> = {
   taken: "Someone already picked that name. If it's really you, ask the coordinator to reset it.",
   locked: "This trip is locked.",
   link: "That personal link isn't valid any more. Pick your name again, or ask the coordinator to reset it.",
+  slow: "Too many attempts. Please wait a minute and try again.",
 };
 
 export default async function TripPage({ params, searchParams }: PageProps<"/t/[slug]">) {

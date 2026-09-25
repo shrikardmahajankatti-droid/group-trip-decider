@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { hashToken, participantCookieName, participantCookieOptions } from "@/lib/server/auth";
 import { db } from "@/lib/server/db";
+import { allow } from "@/lib/server/ratelimit";
 import { getTripBySlug } from "@/lib/server/trips";
 
 /** Personal edit link: /t/{slug}/me?p={token} restores the claim on a new device. */
@@ -9,6 +10,7 @@ export async function GET(request: NextRequest, ctx: RouteContext<"/t/[slug]/me"
   const token = request.nextUrl.searchParams.get("p");
   const trip = await getTripBySlug(slug);
   if (!trip) return NextResponse.redirect(new URL("/", request.url));
+  if (!(await allow("personalLink"))) return NextResponse.redirect(new URL(`/t/${slug}?e=slow`, request.url));
 
   const { data } = token
     ? await db()

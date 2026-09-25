@@ -6,7 +6,9 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/server/db";
 import { loadPeople } from "@/lib/server/people";
 import { runPipeline, writeSingleCard } from "@/lib/server/pipeline";
+import { allowKey } from "@/lib/server/ratelimit";
 import { getShortlist } from "@/lib/server/shortlist";
+import { isUuid } from "@/lib/server/validate";
 import { getTripBySlug, isAdmin, logEvent, type Trip } from "@/lib/server/trips";
 
 export type AdminState = { error?: string; ok?: string };
@@ -26,7 +28,7 @@ function done(slug: string, ok?: string): AdminState {
 /** Free up a name so its owner can claim it again from a new phone. */
 export async function resetClaim(slug: string, key: string, participantId: string): Promise<void> {
   const trip = await requireAdmin(slug, key);
-  if (trip.status === "locked") return;
+  if (trip.status === "locked" || !isUuid(participantId)) return;
   await db()
     .from("participants")
     .update({ token_hash: null, claimed_at: null })
@@ -39,6 +41,8 @@ export async function resetClaim(slug: string, key: string, participantId: strin
 export async function dropOption(slug: string, key: string, optionId: string): Promise<AdminState> {
   const trip = await requireAdmin(slug, key);
   if (trip.status !== "review") return { error: "Options can only be dropped while you're reviewing." };
+  if (!isUuid(optionId)) return { error: "That option is no longer on the shortlist." };
+  if (!allowKey("drop", trip.id)) return { error: "That's a lot of drops. Wait a few minutes, or re-run." };
 
   const shortlist = await getShortlist(trip.id);
   const option = shortlist?.options.find((o) => o.id === optionId);
@@ -83,6 +87,9 @@ export async function rerun(slug: string, key: string): Promise<AdminState> {
   if (trip.status !== "review" && trip.status !== "published") {
     return { error: trip.status === "locked" ? "The trip is locked." : "Options are already being generated." };
   }
+  if (!allowKey("rerun", trip.id)) {
+    return { error: "You've re-run a few times in a row. Please wait a few minutes (this keeps the free AI quota safe)." };
+  }
 
   const { data } = await db()
     .from("trips")
@@ -118,6 +125,7 @@ export async function publish(slug: string, key: string): Promise<AdminState> {
 export async function lockTrip(slug: string, key: string, optionId: string): Promise<AdminState> {
   const trip = await requireAdmin(slug, key);
   if (trip.status !== "published") return { error: "You can lock once the options are published." };
+  if (!isUuid(optionId)) return { error: "That option isn't on the shortlist." };
   const shortlist = await getShortlist(trip.id);
   if (!shortlist?.options.some((o) => o.id === optionId)) return { error: "That option isn't on the shortlist." };
 

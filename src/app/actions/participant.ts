@@ -7,7 +7,9 @@ import { submissionSchema } from "@/lib/schemas";
 import { hashToken, newToken, setParticipantCookie } from "@/lib/server/auth";
 import { db } from "@/lib/server/db";
 import { triggerIfDue } from "@/lib/server/generation";
+import { allow, SLOW_DOWN } from "@/lib/server/ratelimit";
 import { getShortlist } from "@/lib/server/shortlist";
+import { isUuid } from "@/lib/server/validate";
 import {
   friendlyDbError,
   getTripBySlug,
@@ -18,7 +20,8 @@ import {
 /** Claim a name on this device. First come, first served; Riya can reset. */
 export async function claimName(slug: string, participantId: string): Promise<void> {
   const trip = await getTripBySlug(slug);
-  if (!trip) redirect("/");
+  if (!trip || !isUuid(participantId)) redirect("/");
+  if (!(await allow("claim", slug))) redirect(`/t/${slug}?e=slow`);
   if (trip.status === "locked") redirect(`/t/${slug}?e=locked`);
 
   const token = newToken();
@@ -51,6 +54,7 @@ export async function submitPreferences(
 
   const viewer = await getViewer(trip);
   if (!viewer) return { error: "Choose your name first." };
+  if (!(await allow("submit", viewer.participant.id))) return { error: SLOW_DOWN };
 
   let raw: unknown;
   try {
@@ -104,7 +108,8 @@ export type VoteState = { error?: string; ok?: string };
 /** One vote per participant, final once cast (unique constraint + DB trigger). */
 export async function castVote(slug: string, optionId: string): Promise<VoteState> {
   const trip = await getTripBySlug(slug);
-  if (!trip) return { error: "Trip not found" };
+  if (!trip || !isUuid(optionId)) return { error: "Trip not found" };
+  if (!(await allow("vote", slug))) return { error: SLOW_DOWN };
   if (trip.status === "locked") {
     await logEvent(trip.id, "reversal_blocked");
     return { error: "Voting has closed. The trip is locked." };

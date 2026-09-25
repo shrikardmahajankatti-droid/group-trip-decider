@@ -1,6 +1,7 @@
 import "server-only";
 import { db } from "./db";
 import { hashToken, readParticipantToken, tokenMatches } from "./auth";
+import { isSlug } from "./validate";
 
 export type TripStatus = "collecting" | "generating" | "review" | "published" | "locked";
 
@@ -63,6 +64,7 @@ function one<T>(v: T | T[] | null | undefined): T | null {
 }
 
 export async function getTripBySlug(slug: string): Promise<Trip | null> {
+  if (!isSlug(slug)) return null;
   const { data, error } = await db().from("trips").select("*").eq("slug", slug).maybeSingle();
   if (error) throw new Error(`Failed to load trip: ${error.message}`);
   return (data as Trip | null) ?? null;
