@@ -1,9 +1,11 @@
 import "server-only";
+import { aggregate } from "@/lib/logic/aggregate";
+import { todayIST } from "@/lib/logic/dates";
 import { db } from "./db";
+import { loadPeople } from "./people";
 
-// Generation pipeline. Phase 4 stub: records a run and moves the trip to
-// review. Phases 5–6 fill in aggregation → Claude → context → veto → scoring
-// → cards.
+// Generation pipeline. So far: aggregation (code). Phase 6 adds Claude →
+// context → veto/scoring (src/lib/logic/rank.ts) → cards.
 
 export async function runPipeline(tripId: string): Promise<void> {
   const { data: run, error } = await db()
@@ -18,10 +20,14 @@ export async function runPipeline(tripId: string): Promise<void> {
   }
 
   try {
-    // TODO(phase 5/6): real pipeline.
+    const { data: trip } = await db().from("trips").select("trip_nights").eq("id", tripId).single();
+    const people = await loadPeople(tripId);
+    const constraints = aggregate(people, trip?.trip_nights ?? 3, todayIST());
+
+    // TODO(phase 6): candidates, context, veto + scoring, cards.
     await db()
       .from("runs")
-      .update({ status: "done", constraints: { stub: true } })
+      .update({ status: "done", constraints })
       .eq("id", run.id)
       .eq("status", "running"); // a concurrent edit may have marked it stale
   } catch (e) {
