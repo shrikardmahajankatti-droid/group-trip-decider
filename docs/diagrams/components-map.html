@@ -1,0 +1,143 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Components Map</title>
+<style>
+  :root {
+    --ink: #0f172a; --muted: #64748b; --line: #cbd5e1; --head: #0f1b33;
+    --riya: #b45309; --friends: #047857; --app: #4338ca; --ai: #7c3aed; --data: #0f766e; --gate: #1e1b4b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #fff; color: var(--ink); font: 13px/1.45 -apple-system, "Helvetica Neue", Arial, sans-serif; }
+  .page { width: 1500px; padding: 36px 40px 30px; }
+  h1 { font-size: 22px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); font-size: 13px; margin: 0 0 14px; }
+  .flow { font-size: 13.5px; font-style: italic; margin: 0 0 18px; }
+  .flow b { font-style: normal; }
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  th { background: var(--head); color: #fff; text-align: left; font-size: 15px; padding: 10px 10px; border: 1px solid var(--head); }
+  th:first-child { width: 150px; }
+  td { border: 1px solid var(--line); vertical-align: top; padding: 10px 10px 12px; font-size: 12.5px; }
+  td.actor { background: #f8fafc; }
+  .actor .name { font-weight: 700; font-size: 15px; }
+  .actor .role { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
+  .actor .tag { display: inline-block; margin-top: 8px; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; color: #fff; }
+  .n { display: inline-flex; align-items: center; justify-content: center; width: 19px; height: 19px; border-radius: 50%; color: #fff; font-size: 11px; font-weight: 700; margin-right: 5px; vertical-align: -3px; }
+  .riya .n, .riya .tag { background: var(--riya); }
+  .friends .n, .friends .tag { background: var(--friends); }
+  .app .n, .app .tag { background: var(--app); }
+  .ai .n, .ai .tag { background: var(--ai); }
+  .data .n, .data .tag { background: var(--data); }
+  .gate .n, .gate .tag { background: var(--gate); }
+  tr.riya td:not(.actor) { background: #fffbeb; }
+  tr.gate td { background: #eef2ff; }
+  tr.gate td.actor { background: #e0e7ff; }
+  .item + .item { margin-top: 8px; }
+  .strong { font-weight: 700; }
+  .veto { background: #fee2e2; color: #991b1b; font-weight: 700; padding: 0 4px; border-radius: 4px; }
+  .note { color: var(--muted); font-size: 11.5px; margin-top: 6px; }
+  .gap td { border: none; height: 14px; padding: 0; }
+  .legend { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 16px; font-size: 12.5px; color: #334155; }
+  .legend span b { font-size: 14px; }
+  .changes { margin-top: 12px; padding: 10px 12px; border: 1px dashed var(--line); border-radius: 10px; font-size: 12px; color: #334155; }
+  .changes b { color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Group Trip Decider · Components Map</h1>
+  <p class="sub">Trigger → Input → Context → Processing → AI → Output. Each component sits in the cell where its actor performs that function. ● = handoff, ◆ = human gate, numbers = order of events.</p>
+  <p class="flow"><b>Flow:</b> Riya shares ONE link → Friends submit → App aggregates + pulls free context → Gemini proposes candidates → Gemini reads indicative costs from Wikivoyage (code-verified) → App vetoes + scores → Gemini writes options → <b>◆ Riya's Review Gate</b> → group votes once → Riya locks.</p>
+
+  <table>
+    <tr><th>Actor</th><th>Trigger</th><th>Input</th><th>Context</th><th>Processing</th><th>AI</th><th>Output</th></tr>
+
+    <tr class="riya">
+      <td class="actor"><div class="name">Riya</div><div class="role">Coordinator</div><span class="tag">Human</span></td>
+      <td><div class="item"><span class="n">1</span>● Creates trip (5 names, response deadline, nights) → pastes the <span class="strong">ONE link</span> in WhatsApp →</div></td>
+      <td>Submits her own preferences (she's one of the 5)</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td><div class="item"><span class="n">13</span>● <span class="strong">Locks</span> the winning option → copies the ready WhatsApp message (destination, dates, per-person indicative cost, link)</div></td>
+    </tr>
+
+    <tr class="friends">
+      <td class="actor"><div class="name">Friends ×5</div><div class="role">One shared link, no login</div><span class="tag">Human</span></td>
+      <td></td>
+      <td><div class="item"><span class="n">2</span>● Submit in ~3 min: budget cap (₹), date windows, starting city, destination types, hard "won't do" tags (+ optional note). Editable until lock →</div>
+        <div class="note">Tags are enforced by code; the note is shown to Riya and the AI, not enforced.</div></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td><div class="item"><span class="n">12</span>● View 3 options, their own row in the matrix and "where you stand" line → cast <span class="strong">ONE vote</span> (final) →</div></td>
+    </tr>
+
+    <tr class="app">
+      <td class="actor"><div class="name">Trip App</div><div class="role">Next.js on Vercel + Supabase</div><span class="tag">Code</span></td>
+      <td><div class="item"><span class="n">3</span>● Fires once when <span class="strong">5 of 5 submitted OR deadline hit</span> (on submit, on page visit, daily cron). Missing people = "no data" →</div></td>
+      <td></td>
+      <td><div class="item"><span class="n">4</span>Stores all submissions; computes the <span class="strong">date overlap</span>, <span class="strong">budget floor</span> (lowest cap) and the full list of <span class="strong">hard no's</span> →</div></td>
+      <td><div class="item"><span class="n">8</span>● <span class="veto">Hard veto in code</span> on AI tags + code-derived tags (Beach, International, weather) → score each person × option <span class="strong">0–100</span> (budget 40 · dates 40 · type 20) → rank by lowest-person score, then average → top 3 →</div>
+        <div class="note">e.g. "Goa ✗ Siddharth won't do Beach"</div></td>
+      <td></td>
+      <td>Renders 3 option cards + per-person fit matrix; live vote tally. Lock is enforced by the database (0 reversals).</td>
+    </tr>
+
+    <tr class="ai">
+      <td class="actor"><div class="name">Gemini API</div><div class="role">Reasoning / writing (free tier)</div><span class="tag">AI</span></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td><div class="item"><span class="n">5</span>● Step 1: proposes <span class="strong">6–8 candidates</span> fitting group constraints (JSON, Zod-validated) →</div>
+        <div class="item"><span class="n">9</span>● Step 2: writes <span class="strong">3 option cards</span> + a "where you stand" line per person (no invented prices) →</div>
+        <div class="note">Claude API optional: used for steps 1–2 if a key is set.</div></td>
+      <td></td>
+    </tr>
+
+    <tr class="ai">
+      <td class="actor"><div class="name">Gemini + code check</div><div class="role">Indicative costs</div><span class="tag">AI + Code</span></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td><div class="item"><span class="n">7</span>● Per candidate: reads <span class="strong">travel fares from each starting city + stay prices</span> from the Wikivoyage page (JSON); code verifies every quoted price is on the page and links it as the source → back to App for scoring</div>
+        <div class="note">Not found or not verifiable → "cost unavailable" (budget left out of that score).</div></td>
+      <td></td>
+    </tr>
+
+    <tr class="data">
+      <td class="actor"><div class="name">Free Data APIs</div><div class="role">Open-Meteo · Wikivoyage</div><span class="tag">No key</span></td>
+      <td></td>
+      <td></td>
+      <td><div class="item"><span class="n">6</span>● Weather for the date window (Open-Meteo forecast, or same dates last year); destination summary + "Get in" + "Sleep" sections (Wikivoyage API) →</div></td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+
+    <tr class="gap"><td colspan="7"></td></tr>
+
+    <tr class="gate">
+      <td class="actor"><div class="name">Review Gate</div><div class="role">Riya approves</div><span class="tag">◆ Human gate</span></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td><div class="item"><span class="n">10</span><span class="strong">◆ HUMAN GATE:</span> Riya reviews the shortlist, fit matrix, vetoed options with reasons and free-text notes; can <span class="strong">drop</span> (next best fills the slot) or <span class="strong">re-run</span>. Nothing reaches the group until she approves →</div></td>
+      <td></td>
+      <td><div class="item"><span class="n">11</span>● Publish to group</div></td>
+    </tr>
+  </table>
+
+  <div class="legend">
+    <span><b>●</b> handoff</span>
+    <span><b>◆</b> human gate</span>
+    <span><b>→</b> passes to the next step</span>
+    <span>Numbers 1–13 = order of events</span>
+  </div>
+  <div class="changes"><b>Changes from v1:</b> steps 1–2 run on the <b>Gemini free tier</b> (no billing; Claude optional). The free tier has no Google Search grounding, so indicative costs are <b>read from Wikivoyage and verified by code</b> instead of search-grounded. Everything else is as designed. The Cut holds: no live prices, availability, booking, scraping or itineraries.</div>
+</div>
+<script id="measure">document.title = "H=" + Math.ceil(document.querySelector(".page").getBoundingClientRect().height);</script></body>
+</html>
