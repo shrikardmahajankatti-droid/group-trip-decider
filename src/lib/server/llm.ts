@@ -26,6 +26,8 @@ type Args<T> = {
   prompt: string;
   /** Extra check after schema validation; return an error message to retry once. */
   validate?: (value: T) => string | null;
+  /** Filled in with the model that actually answered (for the run trace). */
+  meta?: { model?: string };
 };
 
 export function llmProvider(): "claude" | "gemini" {
@@ -101,6 +103,7 @@ async function callGemini<T>(args: Args<T>, prompt: string): Promise<unknown> {
         },
       });
       const text = res.text ?? "";
+      if (args.meta) args.meta.model = model;
       try {
         return JSON.parse(text);
       } catch {
@@ -134,5 +137,6 @@ async function callClaude<T>(args: Args<T>, prompt: string): Promise<unknown> {
     output_config: { format: zodOutputFormat(args.schema) },
   });
   if (res.stop_reason === "refusal") throw new LlmError(`${args.name}: Claude declined`);
+  if (args.meta) args.meta.model = env.anthropicModel();
   return res.parsed_output;
 }

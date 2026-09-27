@@ -53,3 +53,24 @@ export type StoredCard = {
   /** participant id → one-line "where you stand" */
   where_you_stand: Record<string, string>;
 };
+
+export type RunTrace = {
+  provider: "gemini" | "claude";
+  models: { step1?: string; costs?: string; step2?: string };
+  submitted: number;
+  noData: number;
+  windows: number;
+  fullOverlap: boolean;
+  budgetFloorInr: number | null;
+  hardNos: number;
+  candidates: number;
+  weatherOk: number;
+  wikivoyageOk: number;
+  costsSourced: number;
+  vetoed: { name: string; reasons: string[] }[];
+  survivors: number;
+  shortlisted: number;
+  /** Milliseconds spent in each stage. */
+  ms: Record<string, number>;
+  totalMs: number;
+};

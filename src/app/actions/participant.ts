@@ -1,10 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { todayIST } from "@/lib/logic/dates";
 import { submissionSchema } from "@/lib/schemas";
-import { hashToken, newToken, setParticipantCookie } from "@/lib/server/auth";
+import { hashToken, newToken, participantCookieName, participantCookieOptions, setParticipantCookie } from "@/lib/server/auth";
 import { db } from "@/lib/server/db";
 import { triggerIfDue } from "@/lib/server/generation";
 import { allow, SLOW_DOWN } from "@/lib/server/ratelimit";
@@ -131,4 +132,14 @@ export async function castVote(slug: string, optionId: string): Promise<VoteStat
   }
   revalidatePath(`/t/${slug}`);
   return { ok: "Vote recorded ✓" };
+}
+
+/**
+ * "Not you? Switch person": forget the claim on THIS device only. The claim
+ * itself stays (its owner keeps their personal link); handy on shared phones
+ * and for demos.
+ */
+export async function forgetMe(slug: string): Promise<void> {
+  (await cookies()).set(participantCookieName(slug), "", { ...participantCookieOptions(slug), maxAge: 0 });
+  revalidatePath(`/t/${slug}`);
 }

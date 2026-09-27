@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { redirect } from "next/navigation";
+import { DEMO_SLUG } from "@/lib/demo";
 import { db } from "@/lib/server/db";
 import { loadPeople } from "@/lib/server/people";
 import { runPipeline, writeSingleCard } from "@/lib/server/pipeline";
@@ -138,4 +139,16 @@ export async function lockTrip(slug: string, key: string, optionId: string): Pro
   if (!data?.length) return { error: "The trip changed while you were looking. Refresh and try again." };
   await logEvent(trip.id, "lock");
   return done(slug, "Locked. Nothing can change now.");
+}
+
+/** Demo trip only: restore the starting state (4 of 5 submitted, nothing claimed). */
+export async function resetDemo(slug: string, key: string): Promise<AdminState> {
+  await requireAdmin(slug, key);
+  if (slug !== DEMO_SLUG) return { error: "Only the demo trip can be reset." };
+  const { error } = await db().rpc("reset_demo_trip");
+  if (error) {
+    console.error(`[resetDemo] ${error.message}`);
+    return { error: "Couldn't reset the demo. Try again." };
+  }
+  return done(slug, "Demo reset: 4 of 5 submitted, no names claimed.");
 }

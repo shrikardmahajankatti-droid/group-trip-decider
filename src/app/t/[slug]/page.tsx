@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { castVote, claimName } from "@/app/actions/participant";
+import { castVote, claimName, forgetMe } from "@/app/actions/participant";
 import { ActionButton } from "@/components/ActionButton";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { CopyField } from "@/components/CopyButton";
 import { Disclaimer } from "@/components/Disclaimer";
 import { FitMatrix } from "@/components/FitMatrix";
 import { OptionCard } from "@/components/OptionCard";
+import { PipelineProgress } from "@/components/PipelineProgress";
 import { PrefsForm } from "@/components/PrefsForm";
 import { SubmissionCounter } from "@/components/SubmissionCounter";
 import { formatWindow, placeName } from "@/lib/format";
@@ -15,6 +16,7 @@ import { baseUrl } from "@/lib/server/auth";
 import { recoverStuckGeneration, triggerIfDue } from "@/lib/server/generation";
 import { getShortlist, getViewerVote } from "@/lib/server/shortlist";
 import {
+  getLatestRun,
   getParticipantsWithStatus,
   getSubmission,
   getTripBySlug,
@@ -53,6 +55,7 @@ export default async function TripPage({ params, searchParams }: PageProps<"/t/[
   const [submission, myVote] = viewer
     ? await Promise.all([getSubmission(viewer.participant.id), visible ? getViewerVote(viewer.participant.id) : null])
     : [null, null];
+  const run = trip.status === "generating" ? await getLatestRun(trip.id) : null;
   const deadlinePassed = hasPassed(trip.deadline);
   const personalLink = viewer ? `${await baseUrl()}/t/${slug}/me?p=${viewer.token}` : null;
   const errorMessage = typeof e === "string" ? ERRORS[e] : undefined;
@@ -86,7 +89,7 @@ export default async function TripPage({ params, searchParams }: PageProps<"/t/[
 
   return (
     <div className="space-y-5">
-      {!locked && <AutoRefresh seconds={trip.status === "generating" ? 10 : 20} />}
+      {!locked && <AutoRefresh seconds={trip.status === "generating" ? 3 : 20} />}
       <header className="space-y-1">
         <p className="text-sm text-slate-500">Coordinated by {trip.coordinator_name}</p>
         <h1 className="text-2xl font-bold tracking-tight">{trip.name}</h1>
@@ -103,7 +106,11 @@ export default async function TripPage({ params, searchParams }: PageProps<"/t/[
 
       {!visible && <SubmissionCounter participants={participants} deadlinePassed={deadlinePassed} />}
 
-      <ResultsStatus status={trip.status} coordinator={trip.coordinator_name} deadline={trip.deadline} />
+      {trip.status === "generating" ? (
+        <PipelineProgress stage={run?.status === "running" ? (run.stage ?? null) : null} />
+      ) : (
+        <ResultsStatus status={trip.status} coordinator={trip.coordinator_name} deadline={trip.deadline} />
+      )}
 
       {locked && winner && (
         <section className="space-y-2 rounded-2xl bg-emerald-50 p-4 text-emerald-900">
@@ -172,7 +179,14 @@ export default async function TripPage({ params, searchParams }: PageProps<"/t/[
       {viewer && (
         <section className="space-y-4">
           <div className="card space-y-2">
-            <h2 className="text-lg font-semibold">Hi {viewer.participant.name} 👋</h2>
+            <div className="flex items-baseline justify-between gap-2">
+              <h2 className="text-lg font-semibold">Hi {viewer.participant.name} 👋</h2>
+              {!locked && (
+                <form action={forgetMe.bind(null, slug)}>
+                  <button className="text-xs text-indigo-700 underline">Not you? Switch person</button>
+                </form>
+              )}
+            </div>
             <p className="text-sm text-slate-600">Bookmark your personal link to edit from another device:</p>
             {personalLink && <CopyField value={personalLink} label="Copy" />}
           </div>

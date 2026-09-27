@@ -138,6 +138,8 @@ export type RunRow = {
   status: "running" | "done" | "failed" | "stale";
   error: string | null;
   constraints: unknown;
+  stage: string | null;
+  trace: import("@/lib/pipelineTypes").RunTrace | null;
   created_at: string;
 };
 

@@ -28,7 +28,20 @@ Next.js (App Router, TypeScript strict) on Vercel Hobby · Tailwind · Supabase 
 
 ## Demo trip
 
-`supabase/seed.sql` creates `/t/demo-trip` with 4 of 5 submitted. Coordinator page: `/t/demo-trip/admin?k=demo-admin-riya-2026` (the token is public in the seed file, so use it for testing only). To fire the pipeline, claim **Preethi** and submit.
+`supabase/seed.sql` (it calls `reset_demo_trip()` from migration 0002) creates `/t/demo-trip`. Four of five people have submitted, and the one hard veto is **Siddharth: won't do Beach**. The coordinator page is `/t/demo-trip/admin?k=demo-admin-riya-2026`. That key is public on purpose, so use the demo for testing only. The home page links to both views, and the coordinator page has a **Reset demo** button.
+
+### Demo script (follows the Components Map)
+
+| # | Map step | What to show |
+|---|---|---|
+| 1 | Riya: Trigger | Home page: the create-trip form (one link, deadline). Then open the demo's two views side by side. |
+| 2 | Friends: Input | Group link → tap **Preethi** (no login) → fill in the ~3-minute form. The ticked hard no's are enforced, and the note isn't. Submit. |
+| 3 | Trip App: Trigger | "5 of 5 submitted" starts generation right away (it would also start at the deadline). |
+| 4 | Context → AI → Processing | The live tracker ticks through aggregate → AI step 1 → Open-Meteo + Wikivoyage → costs → **hard veto + scoring** → AI step 2. |
+| 5 | ◆ Review gate | Riya's page: **How these options were made** (for example "Goa ✗ Siddharth won't do Beach"), the 3 cards, the fit matrix, notes, and **Drop** (the next best fills the slot). The group page shows only "Riya is reviewing". |
+| 6 | Publish → Friends: Output | Publish. On the group page, the viewer's row and "where you stand" line are highlighted, costs are marked indicative with sources, and each friend votes once. Use **Not you? Switch person** to vote as someone else. |
+| 7 | Riya: Output | **Lock** → "It's decided" → **Copy WhatsApp message**. Try editing or voting again and the database refuses. Metrics show 0 reversals. |
+| 8 | Reset | **Reset demo** on Riya's page for the next take. |
 
 ## Local setup
 

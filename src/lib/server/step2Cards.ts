@@ -57,7 +57,11 @@ export function inventedAmounts(texts: string[], allowed: number[]): number[] {
     .filter((a) => a >= 100 && !allowed.some((n) => n > 0 && Math.abs(a - n) <= n * 0.1));
 }
 
-export async function writeCards(options: CardInput[], people: Person[]): Promise<Map<string, StoredCard>> {
+export async function writeCards(
+  options: CardInput[],
+  people: Person[],
+  meta?: { model?: string },
+): Promise<Map<string, StoredCard>> {
   const { label, idOf } = labelPeople(people);
   const submitters = people.filter((p) => p.prefs);
 
@@ -102,6 +106,7 @@ export async function writeCards(options: CardInput[], people: Person[]): Promis
 
   const result = await generateStructured({
     name: "step2-cards",
+    meta,
     schema: step2Schema,
     system: SYSTEM,
     prompt: `Options (JSON):\n${JSON.stringify(input, null, 2)}\n\nReturn {"cards": [...]} with one card per ref (${options.map((o) => o.ref).join(", ")}).`,

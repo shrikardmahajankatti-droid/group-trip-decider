@@ -57,6 +57,7 @@ export async function extractCosts(
   targets: CostTarget[],
   people: Person[],
   nights: number,
+  meta?: { model?: string },
 ): Promise<Map<string, { costs: StoredCosts; sources: StoredSource[] }>> {
   const { label, idOf } = labelPeople(people);
   const withText = targets.filter((t) => t.getIn || t.sleep);
@@ -78,7 +79,7 @@ export async function extractCosts(
 
   let result: z.infer<typeof costsSchema>;
   try {
-    result = await generateStructured({ name: "costs-wikivoyage", schema: costsSchema, system: SYSTEM, prompt });
+    result = await generateStructured({ name: "costs-wikivoyage", meta, schema: costsSchema, system: SYSTEM, prompt });
   } catch (e) {
     console.error(`[costs] extraction failed: ${e instanceof Error ? e.message : e}`);
     return out;

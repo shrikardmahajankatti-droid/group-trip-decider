@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { dropOption, lockTrip, publish, rerun, resetClaim } from "@/app/actions/admin";
+import { dropOption, lockTrip, publish, rerun, resetClaim, resetDemo } from "@/app/actions/admin";
 import { ActionButton } from "@/components/ActionButton";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { CopyField } from "@/components/CopyButton";
@@ -8,8 +8,11 @@ import { Disclaimer } from "@/components/Disclaimer";
 import { FitMatrix } from "@/components/FitMatrix";
 import { MetricsPanel } from "@/components/MetricsPanel";
 import { OptionCard } from "@/components/OptionCard";
+import { PipelineProgress } from "@/components/PipelineProgress";
+import { PipelineTrace } from "@/components/PipelineTrace";
 import { SubmissionCounter } from "@/components/SubmissionCounter";
 import { WhatsAppShare } from "@/components/WhatsAppShare";
+import { DEMO_SLUG } from "@/lib/demo";
 import { formatInr, formatWindow } from "@/lib/format";
 import { formatIST, hasPassed } from "@/lib/logic/dates";
 import { baseUrl } from "@/lib/server/auth";
@@ -67,7 +70,7 @@ export default async function AdminPage({ params, searchParams }: PageProps<"/t/
 
   return (
     <div className="space-y-5">
-      <AutoRefresh seconds={trip.status === "generating" ? 8 : 20} />
+      <AutoRefresh seconds={trip.status === "generating" ? 3 : 20} />
       <header className="space-y-1">
         <p className="text-sm font-medium text-indigo-700">Coordinator view · only you can see this</p>
         <h1 className="text-2xl font-bold tracking-tight">{trip.name}</h1>
@@ -94,11 +97,24 @@ export default async function AdminPage({ params, searchParams }: PageProps<"/t/
         </div>
       )}
 
-      {trip.status === "generating" && (
-        <p className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-900">
-          Generating options… This takes a minute or two. The page refreshes by itself.
-        </p>
+      {slug === DEMO_SLUG && (
+        <section className="space-y-2 rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-sm">
+          <p className="font-semibold">🎬 Demo trip</p>
+          <p className="text-slate-600">
+            Open the group link in another tab to act as each friend (use &quot;Not you? Switch person&quot; to swap).
+            Preethi hasn&apos;t submitted yet: submit as her to trigger the options.
+          </p>
+          <ActionButton
+            action={resetDemo.bind(null, slug, key)}
+            label="Reset demo to the start"
+            pendingLabel="Resetting…"
+            className="btn-secondary"
+            confirm="Reset the demo trip? All answers after the seed, votes and the lock are cleared."
+          />
+        </section>
       )}
+
+      {trip.status === "generating" && <PipelineProgress stage={run?.status === "running" ? (run.stage ?? null) : null} />}
       {trip.status === "collecting" && (
         <p className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-900">
           Options are generated automatically when everyone has submitted or at the deadline.
@@ -130,6 +146,8 @@ export default async function AdminPage({ params, searchParams }: PageProps<"/t/
               </div>
             </section>
           )}
+
+          {run?.trace && <PipelineTrace trace={run.trace} />}
 
           {trip.status === "published" && (
             <section className="card space-y-2">

@@ -37,7 +37,8 @@ Rules:
   "Cold weather (<10°C)" / "Very hot weather (>35°C)" = typical for the suggested dates;
   "International travel" = outside India.
   Tagging honestly matters: code removes any destination that matches someone's hard no, so a missing tag only wastes a slot.
-- Avoid destinations that clearly break the group's hard no's; prefer ones that fit the budget floor (per person, whole trip, travel + stay).
+- Prefer destinations that fit the budget floor (per person, whole trip, travel + stay) and avoid the group's hard no's.
+- Exception: if an obvious crowd favourite suits several people's likes but breaks someone's hard no, still include ONE such destination, tagged honestly. Code will remove it and show the group why it was ruled out (this settles the "what about X?" question).
 - suggested_window must be copied exactly from the list of feasible windows.
 - People are labelled P1, P2, ...; never invent names. Do not quote prices.`;
 
@@ -45,6 +46,7 @@ export async function proposeCandidates(
   people: Person[],
   constraints: GroupConstraints,
   nights: number,
+  meta?: { model?: string },
 ): Promise<StoredCandidateData[]> {
   const { label } = labelPeople(people);
   const windows: TripWindow[] = constraints.windows.map((w) => ({ start: w.start, end: w.end }));
@@ -74,6 +76,7 @@ export async function proposeCandidates(
 
   const result = await generateStructured({
     name: "step1-candidates",
+    meta,
     schema: step1Schema,
     system: SYSTEM,
     prompt: `Group constraints (JSON):\n${JSON.stringify(input, null, 2)}\n\nReturn {"candidates": [...]} with 6 to 8 destinations.`,

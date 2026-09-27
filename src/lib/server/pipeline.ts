@@ -3,7 +3,9 @@ import { aggregate } from "@/lib/logic/aggregate";
 import { todayIST } from "@/lib/logic/dates";
 import { evaluateCandidates } from "@/lib/logic/rank";
 import type { CandidateInput, Person } from "@/lib/logic/types";
+import type { StageId } from "@/lib/pipelineStages";
 import type {
+  RunTrace,
   StoredCandidateData,
   StoredCosts,
   StoredSource,
@@ -13,6 +15,7 @@ import type {
 import { extractCosts } from "./costs";
 import { db } from "./db";
 import { mapLimit } from "./http";
+import { llmProvider } from "./llm";
 import { getWeather } from "./openmeteo";
 import { loadPeople } from "./people";
 import { proposeCandidates } from "./step1Candidates";
@@ -55,7 +58,27 @@ export async function runPipeline(tripId: string): Promise<void> {
   }
 }
 
+/** Records the current stage (shown live on both pages) and times each stage. */
+function stageTracker(runId: string) {
+  const ms: Record<string, number> = {};
+  const started = Date.now();
+  let current: { id: StageId; at: number } | null = null;
+  return {
+    ms,
+    started,
+    async enter(id: StageId) {
+      const now = Date.now();
+      if (current) ms[current.id] = now - current.at;
+      current = { id, at: now };
+      await db().from("runs").update({ stage: id }).eq("id", runId);
+    },
+  };
+}
+
 async function generate(tripId: string, runId: string) {
+  const stages = stageTracker(runId);
+  const models: RunTrace["models"] = {};
+  await stages.enter("aggregate");
   const { data: trip } = await db().from("trips").select("trip_nights").eq("id", tripId).single();
   const nights: number = trip?.trip_nights ?? 3;
   const people = await loadPeople(tripId);
@@ -70,15 +93,19 @@ async function generate(tripId: string, runId: string) {
   }
 
   // Step 1: candidates.
+  await stages.enter("step1");
+  const step1Meta: { model?: string } = {};
   let proposals: StoredCandidateData[];
   try {
-    proposals = await proposeCandidates(people, constraints, nights);
+    proposals = await proposeCandidates(people, constraints, nights, step1Meta);
+    models.step1 = step1Meta.model;
   } catch (e) {
     console.error(`[pipeline] step 1 failed: ${e instanceof Error ? e.message : e}`);
     throw new PipelineError("The AI couldn't propose destinations right now. Please re-run in a minute.");
   }
 
   // Free context per candidate, in parallel with a small concurrency cap.
+  await stages.enter("context");
   const context = await mapLimit(proposals, 4, async (c) => {
     const [weather, wikivoyage] = await Promise.all([
       getWeather(c.lat, c.lon, c.suggested_window).catch((e) => {
@@ -94,6 +121,8 @@ async function generate(tripId: string, runId: string) {
   });
 
   // Indicative costs from the Wikivoyage text (one batched AI call).
+  await stages.enter("costs");
+  const costsMeta: { model?: string } = {};
   const refs = proposals.map((_, i) => `D${i + 1}`);
   const costMap = await extractCosts(
     proposals.flatMap((c, i) => {
@@ -102,9 +131,12 @@ async function generate(tripId: string, runId: string) {
     }),
     people,
     nights,
+    costsMeta,
   );
+  models.costs = costsMeta.model;
 
   // Hard veto + scoring + ranking, all in code.
+  await stages.enter("scoring");
   const inputs: CandidateInput[] = proposals.map((c, i) => {
     const costs = costMap.get(refs[i])?.costs ?? null;
     return {
@@ -154,7 +186,34 @@ async function generate(tripId: string, runId: string) {
   if (error || !saved) throw new Error(`saving candidates failed: ${error?.message}`);
   const dbId = (ref: string) => saved[refs.indexOf(ref)].id as string;
 
-  if (evaluation.shortlist.length === 0) return; // all vetoed: the review page explains
+  const trace: RunTrace = {
+    provider: llmProvider(),
+    models,
+    submitted: constraints.submittedIds.length,
+    noData: constraints.noDataIds.length,
+    windows: constraints.windows.length,
+    fullOverlap: constraints.fullOverlap,
+    budgetFloorInr: constraints.budgetFloorInr,
+    hardNos: constraints.hardNos.length,
+    candidates: proposals.length,
+    weatherOk: context.filter((c) => c?.weather).length,
+    wikivoyageOk: context.filter((c) => c?.wikivoyage).length,
+    costsSourced: rows.filter((r) => r.costs.status === "wikivoyage").length,
+    vetoed: rows
+      .filter((r) => r.vetoed)
+      .map((r) => ({ name: r.data.name, reasons: r.veto_reasons.map((v) => `${v.name} won't do ${v.tag}`) })),
+    survivors: rows.filter((r) => !r.vetoed).length,
+    shortlisted: evaluation.shortlist.length,
+    ms: stages.ms,
+    totalMs: 0,
+  };
+  const finish = async () => {
+    await stages.enter("done");
+    trace.totalMs = Date.now() - stages.started;
+    await db().from("runs").update({ trace }).eq("id", runId);
+  };
+
+  if (evaluation.shortlist.length === 0) return finish(); // all vetoed: the review page explains
 
   // Step 2: option cards for the shortlist.
   const cardInputs: CardInput[] = evaluation.shortlist.map((ref) => {
@@ -168,7 +227,9 @@ async function generate(tripId: string, runId: string) {
       scores: rows[i].scores,
     };
   });
-  const cards = await writeCards(cardInputs, people).catch((e) => {
+  await stages.enter("step2");
+  const step2Meta: { model?: string } = {};
+  const cards = await writeCards(cardInputs, people, step2Meta).catch((e) => {
     console.error(`[pipeline] step 2 failed: ${e instanceof Error ? e.message : e}`);
     return null;
   });
@@ -184,6 +245,8 @@ async function generate(tripId: string, runId: string) {
       })),
     );
   if (optErr) throw new Error(`saving options failed: ${optErr.message}`);
+  models.step2 = step2Meta.model;
+  await finish();
 }
 
 /** Re-write one option's card (used when the coordinator drops an option). */
