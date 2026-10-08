@@ -30,6 +30,10 @@ Next.js (App Router, TypeScript strict) on Vercel Hobby · Tailwind · Supabase 
 
 `supabase/seed.sql` (it calls `reset_demo_trip()` from migration 0002) creates `/t/demo-trip`. Four of five people have submitted, and the one hard veto is **Siddharth: won't do Beach**. The coordinator page is `/t/demo-trip/admin?k=demo-admin-riya-2026`. That key is public on purpose, so use the demo for testing only. The home page links to both views, and the coordinator page has a **Reset demo** button.
 
+### Demo studio
+
+Open **`/demo`** on a laptop. It shows a friend's phone and Riya's laptop side by side, and a guide panel that follows the demo trip's live status, says which Components Map step is running, and tells you what to click next. Press **↺ Reset demo** before each take.
+
 ### Demo script (follows the Components Map)
 
 | # | Map step | What to show |
