@@ -48,7 +48,7 @@ export async function proposeCandidates(
   nights: number,
   meta?: { model?: string },
 ): Promise<StoredCandidateData[]> {
-  const { label } = labelPeople(people);
+  const { label, relabel } = labelPeople(people);
   const windows: TripWindow[] = constraints.windows.map((w) => ({ start: w.start, end: w.end }));
 
   const input = {
@@ -93,6 +93,6 @@ export async function proposeCandidates(
           Math.abs(daysBetween(a.start, c.suggested_window.start)) -
           Math.abs(daysBetween(b.start, c.suggested_window.start)),
       )[0];
-    return { ...c, suggested_window: nearest };
+    return { ...c, rationale: relabel(c.rationale), suggested_window: nearest };
   });
 }

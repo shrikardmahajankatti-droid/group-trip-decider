@@ -62,7 +62,7 @@ export async function writeCards(
   people: Person[],
   meta?: { model?: string },
 ): Promise<Map<string, StoredCard>> {
-  const { label, idOf } = labelPeople(people);
+  const { label, idOf, relabel } = labelPeople(people);
   const submitters = people.filter((p) => p.prefs);
 
   const input = options.map((o) => ({
@@ -129,14 +129,14 @@ export async function writeCards(
     const lines: Record<string, string> = {};
     for (const w of c.where_you_stand) {
       const id = idOf(w.person);
-      if (id) lines[id] = w.line;
+      if (id) lines[id] = relabel(w.line);
     }
     for (const p of people) if (!p.prefs) lines[p.id] = "No data: didn't submit preferences before the deadline.";
     out.set(c.ref, {
-      title: c.title,
-      summary: c.summary,
-      why_it_works: c.why_it_works,
-      trade_offs: c.trade_offs,
+      title: relabel(c.title),
+      summary: relabel(c.summary),
+      why_it_works: relabel(c.why_it_works),
+      trade_offs: relabel(c.trade_offs),
       where_you_stand: lines,
     });
   }
