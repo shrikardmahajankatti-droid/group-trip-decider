@@ -44,3 +44,8 @@ body {
     @apply inline-flex cursor-pointer select-none items-center rounded-full border px-3 py-1.5 text-sm;
   }
 }
+
+/* Pages embedded in the demo studio hide the site header/footer. */
+[data-embed] .site-chrome {
+  display: none;
+}

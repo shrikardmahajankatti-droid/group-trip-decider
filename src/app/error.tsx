@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { AppShell } from "@/components/SiteHeader";
 
 export default function Error({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
+    <AppShell>
     <div className="card space-y-3">
       <h1 className="text-lg font-semibold">Something went wrong</h1>
       <p className="text-sm text-slate-600">
@@ -18,5 +20,6 @@ export default function Error({ reset }: { error: Error & { digest?: string }; r
         </Link>
       </div>
     </div>
+    </AppShell>
   );
 }

@@ -10,7 +10,9 @@ import { MetricsPanel } from "@/components/MetricsPanel";
 import { OptionCard } from "@/components/OptionCard";
 import { PipelineProgress } from "@/components/PipelineProgress";
 import { PipelineTrace } from "@/components/PipelineTrace";
+import { AppShell } from "@/components/SiteHeader";
 import { SubmissionCounter } from "@/components/SubmissionCounter";
+import { TripStepper } from "@/components/TripStepper";
 import { WhatsAppShare } from "@/components/WhatsAppShare";
 import { DEMO_SLUG } from "@/lib/demo";
 import { formatInr, formatWindow } from "@/lib/format";
@@ -44,12 +46,14 @@ export default async function AdminPage({ params, searchParams }: PageProps<"/t/
   if (!trip) notFound();
   if (!isAdmin(trip, key)) {
     return (
+      <AppShell>
       <div className="card space-y-2">
         <h1 className="text-lg font-semibold">Coordinator key needed</h1>
         <p className="text-sm text-slate-600">
           This page needs the coordinator link you saved when you created the trip.
         </p>
       </div>
+      </AppShell>
     );
   }
 
@@ -69,6 +73,7 @@ export default async function AdminPage({ params, searchParams }: PageProps<"/t/
   const c = shortlist?.constraints;
 
   return (
+    <AppShell role="coordinator">
     <div className="space-y-5">
       <AutoRefresh seconds={trip.status === "generating" ? 3 : 20} />
       <header className="space-y-1">
@@ -78,6 +83,8 @@ export default async function AdminPage({ params, searchParams }: PageProps<"/t/
           {STATUS_LABEL[trip.status]} · Deadline {formatIST(trip.deadline)} · {trip.trip_nights} nights
         </p>
       </header>
+
+      <TripStepper status={trip.status} />
 
       {run?.status === "stale" && (trip.status === "review" || trip.status === "published") && (
         <div className="space-y-2 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900">
@@ -98,7 +105,7 @@ export default async function AdminPage({ params, searchParams }: PageProps<"/t/
       )}
 
       {slug === DEMO_SLUG && (
-        <section className="space-y-2 rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-sm">
+        <section className="site-chrome space-y-2 rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-sm">
           <p className="font-semibold">🎬 Demo trip</p>
           <p className="text-slate-600">
             Open the group link in another tab to act as each friend (use &quot;Not you? Switch person&quot; to swap).
@@ -346,5 +353,6 @@ export default async function AdminPage({ params, searchParams }: PageProps<"/t/
         </p>
       </section>
     </div>
+    </AppShell>
   );
 }

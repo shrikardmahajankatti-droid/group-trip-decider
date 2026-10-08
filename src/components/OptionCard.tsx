@@ -23,15 +23,39 @@ export function OptionCard({
   const others = people.filter((p) => p.id !== viewerId);
 
   return (
-    <article className="card space-y-3">
-      <header className="space-y-1">
-        <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Option {option.position}</p>
-        <h3 className="text-lg font-bold">{card?.title ?? d.name}</h3>
-        <p className="text-sm text-slate-600">
-          {placeName(d)} · {formatWindow(d.suggested_window)}
+    <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <header className="space-y-1 bg-gradient-to-br from-indigo-600 to-violet-600 px-4 py-4 text-white">
+        <p className="text-xs font-semibold uppercase tracking-wide text-indigo-100">Option {option.position}</p>
+        <h3 className="text-xl font-bold leading-tight">{card?.title ?? d.name}</h3>
+        <p className="text-sm text-indigo-50">
+          📍 {placeName(d)} · 📅 {formatWindow(d.suggested_window)}
         </p>
-        <p className="text-xs text-slate-500">{formatWeather(c.weather)}</p>
+        <p className="text-xs text-indigo-100">🌤 {formatWeather(c.weather)}</p>
       </header>
+
+      <div className="space-y-3 p-4">
+      <div className="flex flex-wrap gap-1.5" aria-label="Fit for each person (0–100)">
+        {people.map((p) => {
+          const s = c.scores?.[p.id];
+          const total = s && !s.noData ? s.total : null;
+          const tone =
+            total === null
+              ? "bg-slate-100 text-slate-500"
+              : total >= 80
+                ? "bg-emerald-100 text-emerald-800"
+                : total >= 50
+                  ? "bg-amber-100 text-amber-800"
+                  : "bg-red-100 text-red-800";
+          return (
+            <span
+              key={p.id}
+              className={`rounded-full px-2.5 py-1 text-xs font-semibold ${tone} ${p.id === viewerId ? "ring-2 ring-indigo-500" : ""}`}
+            >
+              {p.name} {total === null ? "· no data" : `· ${total}`}
+            </span>
+          );
+        })}
+      </div>
 
       <p className="text-sm">{card?.summary ?? d.rationale}</p>
       {card && (
@@ -122,6 +146,7 @@ export function OptionCard({
         </p>
       )}
       {children}
+      </div>
     </article>
   );
 }

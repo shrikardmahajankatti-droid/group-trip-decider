@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { AppShell } from "@/components/SiteHeader";
 
 export default function NotFound() {
   return (
+    <AppShell>
     <div className="card space-y-3">
       <h1 className="text-lg font-semibold">Trip not found</h1>
       <p className="text-sm text-slate-600">
@@ -11,5 +13,6 @@ export default function NotFound() {
         Create a trip instead
       </Link>
     </div>
+    </AppShell>
   );
 }

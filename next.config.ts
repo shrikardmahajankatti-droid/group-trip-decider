@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
           // The coordinator key travels in the admin URL: never send it to other sites.
           { key: "Referrer-Policy", value: "no-referrer" },
           { key: "X-Content-Type-Options", value: "nosniff" },
-          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-Frame-Options", value: "SAMEORIGIN" }, // the /demo studio frames our own pages
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
         ],
       },

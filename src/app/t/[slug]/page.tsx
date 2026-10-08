@@ -8,6 +8,8 @@ import { Disclaimer } from "@/components/Disclaimer";
 import { FitMatrix } from "@/components/FitMatrix";
 import { OptionCard } from "@/components/OptionCard";
 import { PipelineProgress } from "@/components/PipelineProgress";
+import { AppShell } from "@/components/SiteHeader";
+import { TripStepper } from "@/components/TripStepper";
 import { PrefsForm } from "@/components/PrefsForm";
 import { SubmissionCounter } from "@/components/SubmissionCounter";
 import { formatWindow, placeName } from "@/lib/format";
@@ -88,6 +90,7 @@ export default async function TripPage({ params, searchParams }: PageProps<"/t/[
   );
 
   return (
+    <AppShell role="friend">
     <div className="space-y-5">
       {!locked && <AutoRefresh seconds={trip.status === "generating" ? 3 : 20} />}
       <header className="space-y-1">
@@ -97,6 +100,8 @@ export default async function TripPage({ params, searchParams }: PageProps<"/t/[
           {trip.trip_nights} nights · Responses due {formatIST(trip.deadline)}
         </p>
       </header>
+
+      <TripStepper status={trip.status} />
 
       {errorMessage && (
         <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700" role="alert">
@@ -204,6 +209,7 @@ export default async function TripPage({ params, searchParams }: PageProps<"/t/[
         </section>
       )}
     </div>
+    </AppShell>
   );
 }
 
