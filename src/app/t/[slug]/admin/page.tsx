@@ -102,7 +102,9 @@ export default async function AdminPage({ params, searchParams }: PageProps<"/t/
           <p className="font-semibold">🎬 Demo trip</p>
           <p className="text-slate-600">
             Open the group link in another tab to act as each friend (use &quot;Not you? Switch person&quot; to swap).
-            Preethi hasn&apos;t submitted yet: submit as her to trigger the options.
+            {trip.status === "collecting"
+              ? " Preethi hasn't submitted yet: submit as her to trigger the options."
+              : " Press reset before each new take."}
           </p>
           <ActionButton
             action={resetDemo.bind(null, slug, key)}
